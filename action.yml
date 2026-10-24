@@ -1,0 +1,36 @@
+name: Prompt regression guard
+description: Compare immutable recorded runs and publish an Actions job summary
+inputs:
+  store:
+    description: Object-store directory containing both runs
+    required: true
+  base:
+    description: Baseline full run ID
+    required: true
+  candidate:
+    description: Candidate full run ID
+    required: true
+  report:
+    description: Output Markdown path (existing parent directory)
+    default: promptgit-report.md
+  comment:
+    description: Explicitly publish a PR summary comment (same-repository PRs only)
+    default: 'false'
+  token:
+    description: Token with pull-requests write permission, needed only for comment true
+    default: ''
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PROMPTGIT_COMMENT: ${{ inputs.comment }}
+        PROMPTGIT_TOKEN: ${{ inputs.token }}
+        PROMPTGIT_STORE: ${{ inputs.store }}
+        PROMPTGIT_BASE: ${{ inputs.base }}
+        PROMPTGIT_CANDIDATE: ${{ inputs.candidate }}
+        PROMPTGIT_REPORT: ${{ inputs.report }}
+        PROMPTGIT_ACTION: ${{ github.action_path }}
+      run: |
+        export PYTHONPATH="$PROMPTGIT_ACTION${PYTHONPATH:+:$PYTHONPATH}"
+        python "$PROMPTGIT_ACTION/scripts/action.py"

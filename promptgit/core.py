@@ -113,6 +113,24 @@ class Store:
         return self.put("run", {"snapshot": snapshot, "model": model, "outputs": outputs, "metadata": metadata or {}})
 
 
+def json_changes(before, after, path=""):
+    """JSON Pointer paths, treating arrays as ordered values."""
+    if canonical(before) == canonical(after):
+        return []
+    if isinstance(before, dict) and isinstance(after, dict):
+        changes = []
+        for key in sorted(set(before) | set(after)):
+            child = path + "/" + key.replace("~", "~0").replace("/", "~1")
+            if key not in before:
+                changes.append({"path": child, "change": "added", "after": after[key]})
+            elif key not in after:
+                changes.append({"path": child, "change": "removed", "before": before[key]})
+            else:
+                changes.extend(json_changes(before[key], after[key], child))
+        return changes
+    return [{"path": path, "change": "replaced", "before": before, "after": after}]
+
+
 def text_evidence(before, after):
     def tokens(text):
         return set(re.findall(r"\w+", text.casefold()))
@@ -121,8 +139,10 @@ def text_evidence(before, after):
     try:
         left, right = json.loads(before), json.loads(after)
         result["json_equal"] = canonical(left) == canonical(right)
+        result["json_changes"] = json_changes(left, right)
     except (ValueError, TypeError):
         result["json_equal"] = None
+        result["json_changes"] = None
     return result
 
 
@@ -156,5 +176,8 @@ def compare(store, base_id, candidate_id, tolerance=0.0):
                      "before": left, "after": right, **text_evidence(left, right)})
     return {"schema": 1, "base": base_id, "candidate": candidate_id,
             "base_model": base["model"], "candidate_model": candidate["model"],
-            "prompt_changed": old["prompt"] != new["prompt"], "tolerance": tolerance,
+            "prompt_changed": old["prompt"] != new["prompt"],
+            "base_prompt": old["prompt"], "candidate_prompt": new["prompt"],
+            "base_metadata": base["metadata"], "candidate_metadata": candidate["metadata"],
+            "tolerance": tolerance,
             "regressions": regressions, "passed": not regressions, "cases": rows}

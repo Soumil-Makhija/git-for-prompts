@@ -1,0 +1,4 @@
+{"cases":[
+  {"id":"refund","input":"Can I return a purchase after 14 days?","checks":[{"contains":"30 days"},{"not_contains":"guaranteed"},{"max_chars":180}]},
+  {"id":"classification","input":"Classify: I cannot sign in","checks":[{"json_equals":{"category":"account","priority":"normal"}}]}
+]}

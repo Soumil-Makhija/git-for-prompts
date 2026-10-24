@@ -74,3 +74,12 @@ class CoreTests(unittest.TestCase):
             with self.assertRaises(ValueError): compare(self.store, a, a, t)
 
 if __name__ == "__main__": unittest.main()
+
+class StructuredTests(unittest.TestCase):
+    def test_pointer_escaping_and_types(self):
+        from promptgit.core import json_changes
+        self.assertEqual(json_changes({'a/b':{'~x':1}}, {'a/b':{'~x':2}})[0]['path'], '/a~1b/~0x')
+        self.assertEqual(json_changes(True, 1)[0]['change'], 'replaced')
+        self.assertEqual(json_changes({'x':1}, {'y':2}), [
+            {'path':'/x','change':'removed','before':1}, {'path':'/y','change':'added','after':2}])
+        self.assertEqual(json_changes([1,2], [2,1])[0]['path'], '')

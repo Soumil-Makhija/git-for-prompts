@@ -2,9 +2,10 @@
 import argparse
 import difflib
 import json
+import re
 import sys
 from pathlib import Path
-from .core import Store, canonical, compare
+from .core import Store, compare
 
 
 def read_json(path):
@@ -23,6 +24,9 @@ def markdown(report):
     lines = ["# Prompt regression report", "", f"Result: {'PASS' if report['passed'] else 'FAIL'}",
              f"Base: {report['base']}", f"Candidate: {report['candidate']}",
              "", "Token overlap describes wording only; assertions define regression. Outputs below are untrusted recorded text."]
+    prompt_diff = '\n'.join(difflib.unified_diff(report['base_prompt'].splitlines(), report['candidate_prompt'].splitlines(), fromfile='base prompt', tofile='candidate prompt', lineterm=''))
+    fence = '`' * max(3, 1 + max([len(x) for x in re.findall(r'`+', prompt_diff)] or [0]))
+    lines.extend(["", "## Prompt changes", fence + 'diff', prompt_diff, fence])
     for row in report["cases"]:
         # Inline JSON encoding keeps IDs single-line and escapes control characters.
         label = json.dumps(row['id'], ensure_ascii=True).replace('<', '&lt;').replace('>', '&gt;').replace('`', '&#96;')
@@ -32,9 +36,11 @@ def markdown(report):
                           f"Token Jaccard: {row['token_jaccard']:.3f}; JSON equivalent: {row['json_equal']}"])
             diff = '\n'.join(difflib.unified_diff(row['before'].splitlines(), row['after'].splitlines(), fromfile='base', tofile='candidate', lineterm=''))
             # Dynamic fence prevents output text from closing the code block.
-            longest = max([len(part) for part in __import__('re').findall(r'`+', diff)] or [0])
+            longest = max([len(part) for part in re.findall(r'`+', diff)] or [0])
             fence = '`' * max(3, longest + 1)
             lines.extend(["", fence + 'diff', diff, fence])
+            if row['json_changes'] is not None:
+                lines.extend(["", "Structured JSON changes:", "```json", json.dumps(row['json_changes'], ensure_ascii=True, indent=2).replace('`', r'\u0060'), "```"])
     return '\n'.join(lines) + '\n'
 
 
