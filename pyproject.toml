@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "promptgit-local"
+version = "0.1.0"
+description = "Immutable prompt snapshots and evidence-based recorded-output regression diffs"
+requires-python = ">=3.11"
+license = "MIT"
+
+[project.scripts]
+promptgit = "promptgit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["promptgit*"]
